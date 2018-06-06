@@ -1,0 +1,285 @@
+<link rel="import" href="../bower_components/polymer/polymer-element.html">
+<link rel="import" href="../bower_components/app-layout/app-drawer/app-drawer.html">
+<link rel="import" href="../bower_components/app-layout/app-drawer-layout/app-drawer-layout.html">
+<link rel="import" href="../bower_components/app-layout/app-header/app-header.html">
+<link rel="import" href="../bower_components/app-layout/app-header-layout/app-header-layout.html">
+<link rel="import" href="../bower_components/app-layout/app-scroll-effects/app-scroll-effects.html">
+<link rel="import" href="../bower_components/app-layout/app-toolbar/app-toolbar.html">
+<link rel="import" href="../bower_components/app-route/app-location.html">
+<link rel="import" href="../bower_components/app-route/app-route.html">
+<link rel="import" href="../bower_components/iron-pages/iron-pages.html">
+<link rel="import" href="../bower_components/iron-selector/iron-selector.html">
+<link rel="import" href="../bower_components/paper-icon-button/paper-icon-button.html">
+<link rel="import" href="../bower_components/paper-toast/paper-toast.html">
+<link rel="import" href="../bower_components/polymerfire/firebase-app.html">
+<link rel="import" href="../bower_components/polymerfire/firebase-auth.html">
+<link rel="import" href="../bower_components/polymerfire/firebase-document.html">
+<link rel="import" href="../bower_components/polymerfire/firebase-query.html">
+<link rel="import" href="my-icons.html">
+
+<link rel="lazy-import" href="my-view1.html">
+<link rel="lazy-import" href="my-view2.html">
+<link rel="lazy-import" href="my-view3.html">
+<link rel="lazy-import" href="my-view404.html">
+
+<dom-module id="my-app">
+  <template>
+    <style>
+      :host {
+        --app-primary-color: #4285f4;
+        --app-secondary-color: black;
+
+        display: block;
+      }
+
+      app-drawer-layout:not([narrow]) [drawer-toggle] {
+        display: none;
+      }
+
+      app-header {
+        color: #fff;
+        background-color: var(--app-primary-color);
+      }
+
+      app-header paper-icon-button {
+        --paper-icon-button-ink-color: white;
+      }
+
+      .drawer-list {
+        margin: 0 20px;
+      }
+
+      .drawer-list a {
+        display: block;
+        padding: 0 16px;
+        text-decoration: none;
+        color: var(--app-secondary-color);
+        line-height: 40px;
+      }
+
+      .drawer-list a.iron-selected {
+        color: black;
+        font-weight: bold;
+      }
+    </style>
+
+
+    <firebase-app
+      auth-domain="fuguai-search.firebaseapp.com"
+      database-url="https://fuguai-search.firebaseio.com"
+      api-key="AIzaSyBB7QgKKEfD64XWE30VIY1pdFJCZeMZGGs"
+      storage-bucket="fuguai-search.appspot.com"
+      project-id="fuguai-search"
+      messaging-sender-id="172214925930">
+    </firebase-app>
+
+    <firebase-auth
+      id="auth"
+      user="{{user}}"
+      status-known="{{statusKnown}}"
+      on-error="handleError">
+    </firebase-auth>
+
+    <firebase-document
+      id="userData"
+      path="/users/[[user.uid]]"
+      online="{{online}}"
+      data="{{userData}}">
+    </firebase-document>
+
+    <app-location
+        route="{{route}}"
+        url-space-regex="^[[rootPath]]">
+    </app-location>
+
+    <app-route
+        route="{{route}}"
+        pattern="[[rootPath]]:page"
+        data="{{routeData}}"
+        tail="{{subroute}}">
+    </app-route>
+
+    <app-drawer-layout fullbleed narrow="{{narrow}}">
+      <!-- Drawer content -->
+      <app-drawer id="drawer" slot="drawer" swipe-open="[[narrow]]">
+        <app-toolbar>Menu</app-toolbar>
+        <iron-selector selected="[[page]]" attr-for-selected="name" class="drawer-list" role="navigation">
+          <a name="view1" href="[[rootPath]]view1">View One</a>
+          <a name="view2" href="[[rootPath]]view2">View Two</a>
+          <a name="view3" href="[[rootPath]]view3">View Three</a>
+        </iron-selector>
+      </app-drawer>
+
+      <!-- Main content -->
+      <app-header-layout has-scrolling-region>
+
+        <app-header slot="header" condenses reveals effects="waterfall">
+          <app-toolbar>
+            <paper-icon-button icon="my-icons:menu" drawer-toggle></paper-icon-button>
+            <div main-title>不具合データベース</div>
+          </app-toolbar>
+        </app-header>
+
+        <iron-pages
+            selected="[[page]]"
+            attr-for-selected="name"
+            fallback-selection="view404"
+            role="main">
+          <my-view1 name="view1" user-data="[[userData]]"></my-view1>
+          <my-view2 name="view2" user-data="[[userData]]"></my-view2>
+          <my-view3 name="view3"></my-view3>
+          <my-view404 name="view404"></my-view404>
+        </iron-pages>
+      </app-header-layout>
+    </app-drawer-layout>
+
+    <paper-toast id="offlineToast" text="オフライン中の変更は保存されない可能性があります" duration="0" opened$="[[!online]]"><paper-icon-button on-click="_closeOfflineToast" icon="my-icons:close"></paper-icon-button></paper-toast>
+    <paper-toast id="varificationToast" text="アカウントが未承認です" duration="0"><paper-button class="thinButton" on-down="_sendVarificationEmail">承認メール再送</paper-button></paper-toast>
+    <paper-toast id="toast"></paper-toast>
+    <paper-toast id="warnToast"></paper-toast>
+
+  </template>
+
+  <script>
+    class MyApp extends Polymer.Element {
+      static get is() { return 'my-app'; }
+
+      static get properties() {
+        return {
+          page: {
+            type: String,
+            reflectToAttribute: true,
+            observer: '_pageChanged',
+          },
+          routeData: Object,
+          subroute: String,
+          // This shouldn't be neccessary, but the Analyzer isn't picking up
+          // Polymer.Element#rootPath
+          rootPath: String,
+          user: Object,
+          statusKnown: Object,
+          userData: Object,
+          online: Object,
+        };
+      }
+
+      static get observers() {
+        return [
+          '_routePageChanged(routeData.page)',
+          '_checkIfHasCustomCorporateKeyToken(userData.corporateKey)',
+        ];
+      }
+
+      ready() {
+
+        super.ready()
+
+        const that = this
+
+        window.addEventListener('open-toast', function(e) {
+          // console.log("open toast received", e)
+
+          const type = e.detail.type
+          const text = e.detail.text
+
+          if(type == "default") {
+            that._openToast(text)
+          }else if(type == "warn") {
+            that._openWarnToast(text)
+          }else {
+            that._openToast(text)
+          }
+        })
+      }
+
+      _checkIfHasCustomCorporateKeyToken() {
+        if(!this.userData) return
+        if(!this.userData.corporateKey) return
+        const that = this
+        return this.user.getIdToken(true)
+        .then(idToken => {
+
+          var base64Url = idToken.split('.')[1]
+          var base64 = base64Url.replace('-', '+').replace('_', '/')
+          const payload = JSON.parse(window.atob(base64))
+
+           if(!payload.corporateKey) {
+             return that._requestCustomAuthToken()
+           }else {
+            return Promise.reject('user already has corporateKey in their token')
+           }
+        }).then(() => {
+          // console.log("end of checking customg corporate key")
+        }).catch(err => {
+          // console.error("error getting id token", err)
+        })
+      }
+
+      _requestCustomAuthToken() {
+        var customToken
+        const that = this
+        var listener
+
+        const ref = window.firebase.database().ref(`customTokens/${this.user.uid}`)
+        var valueChange = function(snap) {
+          // console.log("value event", snap.val())
+          if(snap.val() === null) {
+            that.user.getIdToken(true)
+            .then(idToken => {
+
+            var base64Url = idToken.split('.')[1]
+            var base64 = base64Url.replace('-', '+').replace('_', '/')
+            const payload = JSON.parse(window.atob(base64))
+            })
+            ref.off('value', valueChange)
+          }
+        }
+        return ref.set({request: true})
+        .then(() => {
+          ref.on("value", valueChange)
+        }).then(() => {
+          // console.log("end of request custom auth token")
+        }).catch(err => {
+          console.error("request custom auth token error", err)
+        })
+      }
+
+      _openToast(text){
+        this.$.toast.text = text
+        this.$.toast.open()
+      }
+
+      _openWarnToast(text) {
+        this.$.warnToast.text = text
+        this.$.warnToast.open()
+      }
+
+      _routePageChanged(page) {
+        // If no page was found in the route data, page will be an empty string.
+        // Default to 'view1' in that case.
+        this.page = page || 'view1';
+
+        // Close a non-persistent drawer when the page & route are changed.
+        if (!this.$.drawer.persistent) {
+          this.$.drawer.close();
+        }
+      }
+
+      _pageChanged(page) {
+        // Load page import on demand. Show 404 page if fails
+        var resolvedPageUrl = this.resolveUrl('my-' + page + '.html');
+        Polymer.importHref(
+            resolvedPageUrl,
+            null,
+            this._showPage404.bind(this),
+            true);
+      }
+
+      _showPage404() {
+        this.page = 'view404';
+      }
+    }
+
+    window.customElements.define(MyApp.is, MyApp);
+  </script>
+</dom-module>

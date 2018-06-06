@@ -1,0 +1,221 @@
+<link rel="import" href="../bower_components/polymer/polymer-element.html">
+<link rel="import" href="../bower_components/paper-input/paper-input.html">
+<link rel="import" href="../bower_components/paper-input/paper-textarea.html">
+<link rel="import" href="../bower_components/paper-button/paper-button.html">
+<link rel="import" href="../bower_components/paper-progress/paper-progress.html">
+<link rel="import" href="../bower_components/file-drop-zone/file-drop-zone.html">
+<link rel="import" href="../bower_components/polymerfire/firebase-auth.html">
+<link rel="import" href="shared-styles.html">
+
+<dom-module id="my-view2">
+  <template>
+    <style include="shared-styles">
+      :host {
+        display: block;
+        padding: 10px;
+      }
+
+
+      file-drop-zone {
+        background-color: #f0f0f0f0;
+        text-align:center;
+        border: 1px solid transparent;
+        padding:8px;
+        margin:16px auto;
+      }
+
+      file-drop-zone.dragover {
+          border: 1px dashed #E91E63;
+          transition: all .3s;
+      }      
+    </style>
+
+    <firebase-auth
+      id="auth"
+      user="{{user}}"
+      on-error="handleError">
+    </firebase-auth>
+
+
+    <div class="card">
+
+
+        <file-drop-zone
+        accept=".jpeg, .png, .jpg"
+        files="{{files}}"
+        multiple
+        on-error="onError">
+
+        <div slot="drop-zone" class="layout vertical center center-justified">
+
+          画像をアップロード
+
+        </div>
+      </file-drop-zone>
+
+      <paper-progress hidden id="progressBar" value="[[imageUploadProgress]]" min="0" max="100"></paper-progress>
+
+      
+      <paper-input id="title" required label="タイトル"></paper-input>
+
+      <paper-textarea id="comment" label="備考"></paper-textarea>
+
+      <paper-button class="primaryButton" on-click="_submit">投稿</paper-button>
+
+
+    </div>
+  </template>
+
+  <script>
+    class MyView2 extends Polymer.Element {
+      static get is() { return 'my-view2'; }
+
+      static get properties() {
+        return {
+          user: Object,
+          files: Object,
+          userData: Object,
+          imageUploadProgress: Object,
+        }
+      }
+
+
+      _upload(postKey) {
+
+        var corporateKey = this.userData.corporateKey
+        var files = this.files
+        var progressBar = this.$.progressBar
+        var downloadURLs = []
+        const that = this
+
+        return new Promise((resolve, reject) => {
+
+          if(!files) reject("no files found")
+          if(!corporateKey) reject("empty corporate key")
+
+          for(var i = 0; i < files.length; i++) {
+            if(files[i].size > 5242880) {
+              console.log("file size", files[0].size)
+              this.set('files', null)
+
+              window.dispatchEvent(new CustomEvent('open-toast', {detail: {type: "warn", text: "5MBを超える写真はアップロードできません"}}))
+              reject("exceded file size")
+            }
+          }
+
+          var totalBytes = []
+          var totalBytesTransferred = []
+
+          for(var i=0; i < files.length; i++) {
+            var ref = firebase.storage().ref(`corporates/${corporateKey}/posts/${postKey}/image${i}`)
+
+            var blob = files[i]
+            var uploadTask = ref.put(blob)
+
+            progressBar.hidden = false
+
+
+            uploadTask.on('state_changed', function(snapshot){
+              // Observe state change events such as progress, pause, and resume
+              // Get task progress, including the number of bytes uploaded and the total number of bytes to be uploaded
+
+              console.log("snapshot", snapshot)
+              console.log("snapshot.ref.fullPath", snapshot.ref.fullPath.split("/")[4])
+              const index = parseInt(snapshot.ref.fullPath.split("/")[4].replace("image", ""))
+              console.log("index", index)
+              totalBytes[index] = snapshot.totalBytes
+              totalBytesTransferred[index] = snapshot.bytesTransferred
+
+              // console.log("i", i)
+              console.log("total bytes", totalBytes)
+              // console.log("totalbytestransfered", totalBytesTransferred)
+
+              var totalByte = 0
+              var totalByteTransferred = 0
+              for(var j = 0; j < totalBytes.length; j++) {
+                totalByte += totalBytes[j] || 0
+                totalByteTransferred += totalBytesTransferred[j] || 0
+              }
+              var progress = totalByteTransferred / (totalByte || 1) * 100
+
+              //update progress bar
+              that.set('imageUploadProgress', progress)
+
+              // console.log('Upload is ' + progress + '% done')
+              switch (snapshot.state) {
+                case firebase.storage.TaskState.PAUSED: // or 'paused'
+                  console.log('Upload is paused')
+                  break
+                case firebase.storage.TaskState.RUNNING: // or 'running'
+                  console.log('Upload is running')
+                  break
+              }
+            }, function(err) {
+              // Handle unsuccessful uploads
+              console.log("error uploading", err)
+              progressBar.hidden = true
+              reject(err)
+            }, function() {
+              // Handle successful uploads on complete
+              // For instance, get the download URL: https://firebasestorage.googleapis.com/...
+              
+
+              //enter the down load url into the data base
+              var downloadURL = uploadTask.snapshot.downloadURL
+              console.log("download url", downloadURL)
+              downloadURLs.push(downloadURL)
+              if(downloadURLs.length == files.length){
+                progressBar.hidden = true
+                resolve(downloadURLs)
+              }
+            })
+
+          }
+        })
+      }
+
+      _submit() {
+        const userData = this.userData
+        const user = this.user
+        const that = this
+        if(!user) return
+        if(!userData) return
+        if(!userData.corporateKey) return
+
+        const titleValidate = this.$.title.validate()
+        if(!titleValidate) return
+
+        const title = this.$.title.value
+        const comment = this.$.comment.value
+
+        const db = window.firebase.firestore()
+        const postKey = db.collection("posts").doc().id
+
+        this._upload(postKey)
+        .then(imageURLs => {
+
+        console.log("image urls", imageURLs)
+
+        db.doc(`posts/${postKey}`).set({
+          title: title,
+          comment: comment,
+          time: window.firebase.firestore.FieldValue.serverTimestamp(),
+          posterUid: that.user.uid,
+          corporateKey: that.userData.corporateKey,
+          imageURLs: imageURLs,
+        }, {merge: true})
+
+        that.$.title.value = null
+        that.$.comment.value = null
+        that.set("files", null)
+        })
+
+
+      }
+
+
+    }
+
+    window.customElements.define(MyView2.is, MyView2);
+  </script>
+</dom-module>

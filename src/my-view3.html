@@ -1,0 +1,154 @@
+<!--
+@license
+Copyright (c) 2016 The Polymer Project Authors. All rights reserved.
+This code may only be used under the BSD style license found at http://polymer.github.io/LICENSE.txt
+The complete set of authors may be found at http://polymer.github.io/AUTHORS.txt
+The complete set of contributors may be found at http://polymer.github.io/CONTRIBUTORS.txt
+Code distributed by Google as part of the polymer project is also
+subject to an additional IP rights grant found at http://polymer.github.io/PATENTS.txt
+-->
+
+<link rel="import" href="../bower_components/polymer/polymer-element.html">
+<link rel="import" href="../bower_components/iron-collapse/iron-collapse.html">
+<link rel="import" href="../bower_components/paper-input/paper-input.html">
+<link rel="import" href="../bower_components/paper-button/paper-button.html">
+<link rel="import" href="../bower_components/paper-spinner/paper-spinner-lite.html">
+<link rel="import" href="../bower_components/polymerfire/firebase-auth.html">
+<link rel="import" href="shared-styles.html">
+
+<dom-module id="my-view3">
+  <template>
+    <style include="shared-styles">
+      :host {
+        display: block;
+        padding: 10px;
+      }
+    </style>
+
+    <firebase-auth
+      id="auth"
+      user="{{user}}"
+      status-known="{{statusKnown}}"
+      on-signed-in-changed="_signedInChanged"
+      on-error="handleError">
+    </firebase-auth>
+
+    <div class="card">
+
+      <iron-collapse opened$="[[user.uid]]">
+        <paper-button on-click="_signOut">ログアウト</paper-button>
+      </iron-collapse>
+
+      <iron-collapse opened$="[[!user.uid]]">
+
+          <iron-collapse id="loginForm" opened>
+            <paper-input id="loginEmail" required label="email"></paper-input>
+            <paper-input id="loginPassword" required label="password" type="password"></paper-input>
+    
+            <paper-button on-click="_login">ログイン</paper-button>
+            <paper-button on-click="_openRegisterForm">登録はこちら</paper-button>
+          </iron-collapse>
+      
+          <iron-collapse id="registerForm">
+            <paper-input id="corporateName" required label="Company"></paper-input>
+            <paper-input id="registerEmail" required label="email"></paper-input>
+            <paper-input id="registerPassword" required label="password" type="password"></paper-input>
+    
+            <paper-button on-click="_register">登録</paper-button>
+            <paper-button on-click="_openLoginForm">ログインはこちら</paper-button>
+          </iron-collapse>
+
+          <iron-collapse id="spinnerWrapper">
+            <paper-spinner-lite active></paper-spinner-lite>
+          </iron-collapse>
+
+
+
+      </iron-collapse>
+
+
+      
+          
+    </div>
+  </template>
+
+  <script>
+    class MyView3 extends Polymer.Element {
+      static get is() { return 'my-view3'; }
+
+      static get properties() {
+        return {
+          user: Object,
+          statusKnown: Object,
+        }
+      }    
+      
+      _signOut() {
+        this.$.auth.signOut()
+        .then(() => {
+          window.dispatchEvent(new CustomEvent('open-toast', {detail: {type: "default", text: "ログアウトしました"}}))
+        })
+      }
+
+      _login() {
+        const emailValidate = this.$.loginEmail.validate()
+        const passwordValidate = this.$.loginPassword.validate()
+        if(!emailValidate || !passwordValidate) return
+        const email = this.$.loginEmail.value
+        const password = this.$.loginPassword.value
+        this.$.spinnerWrapper.show()
+        this.$.loginForm.hide()
+        this.$.auth.signInWithEmailAndPassword(email, password)
+        .then(user => {
+          this.$.spinnerWrapper.hide()
+          this.$.loginForm.show()
+          console.log("user", user)
+          window.dispatchEvent(new CustomEvent('open-toast', {detail: {type: "default", text: "ログインしました"}}))
+        }).catch(err => {
+          this.$.spinnerWrapper.hide()
+          this.$.loginForm.show()
+          console.error("sign in with email and password error", err)
+        })
+      }
+
+      _register() {
+        const emailValidate = this.$.registerEmail.validate()
+        const passwordValidate = this.$.registerPassword.validate()
+        const corporateNameValidate = this.$.corporateName.validate()
+        if(!emailValidate || !passwordValidate || !corporateNameValidate) return
+        const email = this.$.registerEmail.value
+        const password = this.$.registerPassword.value
+        const corporateName = this.$.corporateName.value
+        this.$.spinnerWrapper.show()
+        this.$.registerForm.hide()
+        this.$.auth.createUserWithEmailAndPassword(email, password)
+        .then(user => {
+          console.log("user", user)
+          return window.firebase.database().ref(`users/${user.uid}/corporateName`).set(corporateName)
+        }).then(() => {
+          this.$.spinnerWrapper.hide()
+          this.$.registerForm.show()
+          window.dispatchEvent(new CustomEvent('open-toast', {detail: {type: "default", text: "登録が完了しました"}}))
+        }).catch(err => {
+          this.$.spinnerWrapper.hide()
+          this.$.registerForm.show()
+          console.error("sign in with email and password error", err)
+        })
+      }
+
+      _openRegisterForm() {
+        this.$.loginForm.hide()
+        this.$.registerForm.show()
+      }
+
+      _openLoginForm() {
+        this.$.loginForm.show()
+        this.$.registerForm.hide()
+      }
+
+    }
+
+
+    window.customElements.define(MyView3.is, MyView3);
+  </script>
+</dom-module>

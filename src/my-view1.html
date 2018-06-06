@@ -1,0 +1,99 @@
+<link rel="import" href="../bower_components/polymer/polymer-element.html">
+<link rel="import" href="../bower_components/polymerfire/firebase-auth.html">
+<link rel="import" href="shared-styles.html">
+
+<dom-module id="my-view1">
+  <template>
+    <style include="shared-styles">
+      :host {
+        display: block;
+
+        padding: 10px;
+      }
+    </style>
+
+    <div class="card">
+
+
+      <template is="dom-repeat" items="[[posts]]" sort="_computeSort">
+        <template is="dom-repeat" items="[[item.imageURLs]]" as="imageURL" sort="_computeSort">
+          <img src="[[imageURL]]" />
+        </template>
+        <h2>[[item.title]]</h2>
+        <div>[[item.comment]]</div>
+      </template>
+
+
+      
+    </div>
+  </template>
+
+  <script>
+    class MyView1 extends Polymer.Element {
+      static get is() { return 'my-view1'; }
+
+      static get properties() {
+        return {
+          user: Object,
+          timelineListener: Object,
+          posts: Object,
+          userData: Object,
+        }
+      }
+
+      static get observers() {
+        return [
+          '_reloadPosts(userData.corporateKey)',
+        ];
+      }
+
+      ready() {
+        super.ready()
+      }
+
+      _reloadPosts() {
+        const userData = this.userData
+
+        if(!userData) return
+
+        const corporateKey = this.userData.corporateKey
+
+        const that = this
+        if(this.timelineListener){
+          this.timelineListener()
+          this.set("posts", null)
+        }
+
+        if(!corporateKey) return
+
+        this.set("posts", [])
+        const db = window.firebase.firestore()
+        this.timelineListener = db.collection("posts").where("corporateKey", "==", corporateKey)
+          .onSnapshot(function(querySnapshot) {
+              that.posts = []
+              querySnapshot.forEach(function(doc) {
+                  const data = doc.data()
+                  console.log("data", data)
+                  data.$key = doc.id
+                  // data.createTime = data.createTime?that.$.behavior.convertToDate(data.createTime):that.$.behavior.convertToDate(new Date())
+                  that.push('posts', data)
+              });
+              // that.$.paperSpinnerLite.hidden = true
+          })
+      }
+
+
+      _computeSort(a, b) {
+        // http://stackoverflow.com/questions/33953938/polymer-1-0-sorting-dom-repeat
+        if (a.time == b.time) {
+          return 0;
+        }
+        return a.time > b.time ? -1 : 1;
+      }
+
+
+    }
+
+    window.customElements.define(MyView1.is, MyView1);
+  </script>
+</dom-module>
