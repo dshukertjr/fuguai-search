@@ -32,16 +32,11 @@ subject to an additional IP rights grant found at http://polymer.github.io/PATEN
       }
 
       .card{
-        position:absolute;
-        top: 0;
-        left: 0;
-        right: 0;
-        bottom: 0;
         display:flex;
         flex-direction: column;
         align-items: stretch;
         justify-content: flex-end;
-        padding:0 48px 36px 48px;
+        padding:48px 48px 36px 48px;
       }
 
       paper-input {
@@ -95,6 +90,15 @@ subject to an additional IP rights grant found at http://polymer.github.io/PATEN
       paper-spinner-lite {
         --paper-spinner-color: #fff;
       }
+
+      .overflowWrapper {
+        position: absolute;
+        top:0;
+        left:0;
+        right:0;
+        bottom:0;
+        overflow-y: auto;
+      }
     </style>
 
     <firebase-auth
@@ -105,47 +109,52 @@ subject to an additional IP rights grant found at http://polymer.github.io/PATEN
       on-error="handleError">
     </firebase-auth>
 
-    <div class="card">
+    <div class="overflowWrapper">
 
-      <iron-collapse opened$="[[user.uid]]">
-        <paper-button on-click="_signOut">ログアウト</paper-button>
-      </iron-collapse>
 
-      <iron-collapse opened$="[[!user.uid]]">
+        <div class="card">
 
-          <iron-collapse id="loginForm" opened>
-            <div class="relative">
-              <paper-input id="loginEmail" on-value-changed="_loginValueChanged" required label="email" type="email"></paper-input>
-              <paper-input id="loginPassword" on-value-changed="_loginValueChanged" required label="password" type="password"></paper-input>
-              <paper-icon-button id="loginButton" disabled on-click="_login" icon="my-icons:send"></paper-icon-button>
-            </div>
-    
-            <paper-button class="changeOption" on-click="_openRegisterForm">登録はこちら</paper-button>
-          </iron-collapse>
+            <iron-collapse opened$="[[user.uid]]">
+              <paper-button on-click="_signOut">ログアウト</paper-button>
+            </iron-collapse>
       
-          <iron-collapse id="registerForm">
-            <div class="relative">
-              <paper-input id="corporateName" on-value-changed="_registerValueChanged" required label="Company Name"></paper-input>
-              <paper-input id="registerEmail" on-value-changed="_registerValueChanged" required label="email" type="email"></paper-input>
-              <paper-input id="registerPassword" on-value-changed="_registerValueChanged" required label="password" type="password"></paper-input>
-              <paper-icon-button id="registerButton" disabled on-click="_register" icon="my-icons:send"></paper-icon-button>
-            </div>
-    
-            <paper-button class="changeOption" on-click="_openLoginForm">ログインはこちら</paper-button>
-          </iron-collapse>
-
-          <iron-collapse id="spinnerWrapper">
-            <paper-spinner-lite active></paper-spinner-lite>
-          </iron-collapse>
-
-
-
-      </iron-collapse>
-
-
+            <iron-collapse opened$="[[!user.uid]]">
       
+                <iron-collapse id="loginForm" opened>
+                  <div class="relative">
+                    <paper-input id="loginEmail" on-value-changed="_loginValueChanged" required label="email" type="email"></paper-input>
+                    <paper-input id="loginPassword" on-value-changed="_loginValueChanged" required label="password" type="password"></paper-input>
+                    <paper-icon-button id="loginButton" disabled on-click="_login" icon="my-icons:send"></paper-icon-button>
+                  </div>
           
+                  <paper-button class="changeOption" on-click="_openRegisterForm">登録はこちら</paper-button>
+                </iron-collapse>
+            
+                <iron-collapse id="registerForm">
+                  <div class="relative">
+                    <paper-input id="corporateName" on-value-changed="_registerValueChanged" required label="Company Name"></paper-input>
+                    <paper-input id="registerEmail" on-value-changed="_registerValueChanged" required label="email" type="email"></paper-input>
+                    <paper-input id="registerPassword" on-value-changed="_registerValueChanged" required label="password" type="password"></paper-input>
+                    <paper-icon-button id="registerButton" disabled on-click="_register" icon="my-icons:send"></paper-icon-button>
+                  </div>
+          
+                  <paper-button class="changeOption" on-click="_openLoginForm">ログインはこちら</paper-button>
+                </iron-collapse>
+      
+                <iron-collapse id="spinnerWrapper">
+                  <paper-spinner-lite active></paper-spinner-lite>
+                </iron-collapse>
+      
+      
+      
+            </iron-collapse>
+      
+      
+            
+                
+          </div>      
     </div>
+
   </template>
 
   <script>
