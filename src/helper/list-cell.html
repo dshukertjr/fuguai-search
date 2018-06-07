@@ -21,28 +21,50 @@
         display:flex;
         flex-wrap: wrap;
         max-height:300px;
-        /* margin: auto -10px; */
       }
 
       #imageWrapper img {
         object-fit: cover;
         display:block;
         width:100%;
+        cursor: pointer;
+      }
+
+      #viewingImageWrapper {
+        position:fixed;
+        top: 64px;
+        left:0;
+        right:0;
+        bottom:0;
+        background-color:#000;
+        display:none;
+        opacity:0;
+        justify-content: center;
+        align-items: center;
+      }
+      
+      #viewingImage {
+        max-width:100%;
+        max-height:100%;
       }
     </style>
+
+    <div id="viewingImageWrapper" on-click="_dismissViewingImage">
+      <img id="viewingImage" src="[[viewingImageSrc]]" />
+    </div>
 
 
     <h2>[[post.title]]</h2>
     <div id="imageWrapper">
       <template is="dom-repeat" items="[[post.imageURLs]]" sort="_computeSort">
-        <img src="[[item]]" />
+        <img on-click="_viewImage" src="[[item]]" />
+
       </template>
     </div>
     <div>[[post.comment]]</div>
 
 
       
-    </div>
   </template>
 
   <script>
@@ -54,6 +76,7 @@
           user: Object,
           userData: Object,
           post: Object,
+          viewingImageSrc: String,
         }
       }
 
@@ -61,6 +84,21 @@
         return [
           // '_reloadPosts(userData.corporateKey)',
         ];
+      }
+
+      _dismissViewingImage() {
+        this.set("viewingImageSrc", null)
+        this.$.viewingImageWrapper.style.display = "none"
+        this.$.viewingImageWrapper.style.opacity = "0"
+      }
+
+      _viewImage(e) {
+        console.log(e.target)
+        // e.target.classList.toggle("viewing")
+        const imageSrc = e.target.getAttribute("src")
+        this.set("viewingImageSrc", imageSrc)
+        this.$.viewingImageWrapper.style.display = "flex"
+        this.$.viewingImageWrapper.style.opacity = "1"
       }
 
       _computeSort(a, b) {

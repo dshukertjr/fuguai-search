@@ -1,5 +1,6 @@
 <link rel="import" href="../bower_components/polymer/polymer-element.html">
 <link rel="import" href="../bower_components/polymerfire/firebase-auth.html">
+<link rel="import" href="../bower_components/paper-spinner/paper-spinner-lite.html">
 <link rel="import" href="helper/list-cell.html">
 <link rel="import" href="shared-styles.html">
 
@@ -10,6 +11,11 @@
         display: block;
         padding: 10px;
       }
+
+      #spinner {
+        display:block;
+        margin: 100px auto 0 auto;
+      }
     </style>
 
     <div class="card">
@@ -19,6 +25,8 @@
         <list-cell post="[[item]]"></list-cell>
       </template>
 
+
+      <paper-spinner-lite id="spinner" active></paper-spinner-lite>
 
       
     </div>
@@ -48,6 +56,7 @@
       }
 
       _reloadPosts() {
+        this.$.spinner.hidden = false
         const userData = this.userData
 
         if(!userData) return
@@ -69,11 +78,12 @@
               that.posts = []
               querySnapshot.forEach(function(doc) {
                   const data = doc.data()
-                  console.log("data", data)
+                  // console.log("data", data)
                   data.$key = doc.id
                   // data.createTime = data.createTime?that.$.behavior.convertToDate(data.createTime):that.$.behavior.convertToDate(new Date())
                   that.push('posts', data)
               });
+              that.$.spinner.hidden = true
               // that.$.paperSpinnerLite.hidden = true
           })
       }
