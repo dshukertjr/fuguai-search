@@ -1,0 +1,78 @@
+<link rel="import" href="../../bower_components/polymer/polymer-element.html">
+<link rel="import" href="../shared-styles.html">
+
+<dom-module id="list-cell">
+  <template>
+    <style include="shared-styles">
+      :host {
+        display: block;
+        border-bottom: 1px solid #eee;
+        padding:12px 0;
+      }
+
+      h2 {
+        margin-top: 0;
+        padding-top: 0;
+      }
+
+      #imageWrapper {
+        overflow:hidden;
+        border-radius:8px;
+        display:flex;
+        flex-wrap: wrap;
+        max-height:300px;
+      }
+
+      #imageWrapper img {
+        object-fit: cover;
+        display:block;
+        width:100%;
+      }
+    </style>
+
+
+    <h2>[[post.title]]</h2>
+    <div id="imageWrapper">
+      <template is="dom-repeat" items="[[post.imageURLs]]" sort="_computeSort">
+        <img src="[[item]]" />
+      </template>
+    </div>
+    <div>[[post.comment]]</div>
+
+
+      
+    </div>
+  </template>
+
+  <script>
+    class ListCell extends Polymer.Element {
+      static get is() { return 'list-cell'; }
+
+      static get properties() {
+        return {
+          user: Object,
+          userData: Object,
+          post: Object,
+        }
+      }
+
+      static get observers() {
+        return [
+          // '_reloadPosts(userData.corporateKey)',
+        ];
+      }
+
+      _computeSort(a, b) {
+        // http://stackoverflow.com/questions/33953938/polymer-1-0-sorting-dom-repeat
+        if (a.time == b.time) {
+          return 0;
+        }
+        return a.time > b.time ? -1 : 1;
+      }
+
+
+    }
+
+    window.customElements.define(ListCell.is, ListCell);
+  </script>
+</dom-module>

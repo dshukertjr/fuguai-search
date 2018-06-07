@@ -12,16 +12,88 @@ subject to an additional IP rights grant found at http://polymer.github.io/PATEN
 <link rel="import" href="../bower_components/iron-collapse/iron-collapse.html">
 <link rel="import" href="../bower_components/paper-input/paper-input.html">
 <link rel="import" href="../bower_components/paper-button/paper-button.html">
+<link rel="import" href="../bower_components/paper-icon-button/paper-icon-button.html">
 <link rel="import" href="../bower_components/paper-spinner/paper-spinner-lite.html">
 <link rel="import" href="../bower_components/polymerfire/firebase-auth.html">
+<link rel="import" href="my-icons.html">
 <link rel="import" href="shared-styles.html">
 
-<dom-module id="my-view3">
+<dom-module id="my-login">
   <template>
     <style include="shared-styles">
       :host {
         display: block;
         padding: 10px;
+        background-image: url(../images/login.jpg);
+        background-size: cover;
+        background-position: center top;
+        min-height: calc(100vh - 200px);
+        position: relative;
+      }
+
+      .card{
+        position:absolute;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        display:flex;
+        flex-direction: column;
+        align-items: stretch;
+        justify-content: flex-end;
+        padding:0 48px 36px 48px;
+      }
+
+      paper-input {
+        padding:8px;
+        background-color: #f9f9f9;
+        --paper-input-container-underline: {
+          color: transparent;
+          border-color: transparent;
+        }
+      }
+
+      paper-button {
+        color: #fff;
+      }
+
+      .relative {
+        margin-right: 20px;
+      }
+
+      .relative paper-icon-button {
+        color: #fff;
+        background-image: linear-gradient(to right, #9575CD, #64B5F6);
+        position:absolute;
+        right:0;
+        bottom:0;
+        z-index:10;
+        transform:translateZ(100px) translateX(30%) translateY(30%);
+        width: 64px;
+        height: 64px;
+        padding: 23px;
+        box-shadow: 0 2px 2px 0 rgba(0, 0, 0, 0.14), 0 1px 5px 0 rgba(0, 0, 0, 0.12), 0 3px 1px -2px rgba(0, 0, 0, 0.2);
+      }
+
+      paper-icon-button[disabled] {
+        background-image: none;
+        background-color: #eee;
+      }
+
+      .changeOption {
+        margin-left: 0;
+        padding-left: 0;
+      }
+
+      #spinnerWrapper {
+        display:flex;
+        justify-content: center;
+        align-items: center;
+        height:100px;
+      }
+
+      paper-spinner-lite {
+        --paper-spinner-color: #fff;
       }
     </style>
 
@@ -42,20 +114,24 @@ subject to an additional IP rights grant found at http://polymer.github.io/PATEN
       <iron-collapse opened$="[[!user.uid]]">
 
           <iron-collapse id="loginForm" opened>
-            <paper-input id="loginEmail" required label="email"></paper-input>
-            <paper-input id="loginPassword" required label="password" type="password"></paper-input>
+            <div class="relative">
+              <paper-input id="loginEmail" on-value-changed="_loginValueChanged" required label="email" type="email"></paper-input>
+              <paper-input id="loginPassword" on-value-changed="_loginValueChanged" required label="password" type="password"></paper-input>
+              <paper-icon-button id="loginButton" disabled on-click="_login" icon="my-icons:send"></paper-icon-button>
+            </div>
     
-            <paper-button on-click="_login">ログイン</paper-button>
-            <paper-button on-click="_openRegisterForm">登録はこちら</paper-button>
+            <paper-button class="changeOption" on-click="_openRegisterForm">登録はこちら</paper-button>
           </iron-collapse>
       
           <iron-collapse id="registerForm">
-            <paper-input id="corporateName" required label="Company"></paper-input>
-            <paper-input id="registerEmail" required label="email"></paper-input>
-            <paper-input id="registerPassword" required label="password" type="password"></paper-input>
+            <div class="relative">
+              <paper-input id="corporateName" on-value-changed="_registerValueChanged" required label="Company Name"></paper-input>
+              <paper-input id="registerEmail" on-value-changed="_registerValueChanged" required label="email" type="email"></paper-input>
+              <paper-input id="registerPassword" on-value-changed="_registerValueChanged" required label="password" type="password"></paper-input>
+              <paper-icon-button id="registerButton" disabled on-click="_register" icon="my-icons:send"></paper-icon-button>
+            </div>
     
-            <paper-button on-click="_register">登録</paper-button>
-            <paper-button on-click="_openLoginForm">ログインはこちら</paper-button>
+            <paper-button class="changeOption" on-click="_openLoginForm">ログインはこちら</paper-button>
           </iron-collapse>
 
           <iron-collapse id="spinnerWrapper">
@@ -73,15 +149,36 @@ subject to an additional IP rights grant found at http://polymer.github.io/PATEN
   </template>
 
   <script>
-    class MyView3 extends Polymer.Element {
-      static get is() { return 'my-view3'; }
+    class MyLogin extends Polymer.Element {
+      static get is() { return 'my-login'; }
 
       static get properties() {
         return {
           user: Object,
           statusKnown: Object,
         }
-      }    
+      }
+
+      _loginValueChanged() {
+        const email = this.$.loginEmail.value || ""
+        const password = this.$.loginPassword.value || ""
+        if(email.length > 4 && password.length > 4) {
+          this.$.loginButton.disabled = false
+        }else {
+          this.$.loginButton.disabled = true
+        }
+      }
+
+      _registerValueChanged() {
+        const email = this.$.registerEmail.value || ""
+        const password = this.$.registerPassword.value || ""
+        const corporateName = this.$.corporateName.value || ""
+        if(email.length > 4 && password.length > 4 && corporateName.length > 0) {
+          this.$.registerButton.disabled = false
+        }else {
+          this.$.registerButton.disabled = true
+        }
+      }
       
       _signOut() {
         this.$.auth.signOut()
@@ -104,6 +201,8 @@ subject to an additional IP rights grant found at http://polymer.github.io/PATEN
           this.$.loginForm.show()
           console.log("user", user)
           window.dispatchEvent(new CustomEvent('open-toast', {detail: {type: "default", text: "ログインしました"}}))
+          window.history.pushState({}, null, '/list')
+          window.dispatchEvent(new CustomEvent('location-changed'))
         }).catch(err => {
           this.$.spinnerWrapper.hide()
           this.$.loginForm.show()
@@ -129,6 +228,8 @@ subject to an additional IP rights grant found at http://polymer.github.io/PATEN
           this.$.spinnerWrapper.hide()
           this.$.registerForm.show()
           window.dispatchEvent(new CustomEvent('open-toast', {detail: {type: "default", text: "登録が完了しました"}}))
+          window.history.pushState({}, null, '/list')
+          window.dispatchEvent(new CustomEvent('location-changed'))
         }).catch(err => {
           this.$.spinnerWrapper.hide()
           this.$.registerForm.show()
@@ -149,6 +250,6 @@ subject to an additional IP rights grant found at http://polymer.github.io/PATEN
     }
 
 
-    window.customElements.define(MyView3.is, MyView3);
+    window.customElements.define(MyLogin.is, MyLogin);
   </script>
 </dom-module>

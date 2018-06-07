@@ -11,25 +11,31 @@
 <link rel="import" href="../bower_components/iron-selector/iron-selector.html">
 <link rel="import" href="../bower_components/paper-icon-button/paper-icon-button.html">
 <link rel="import" href="../bower_components/paper-toast/paper-toast.html">
+<link rel="import" href="../bower_components/page-title/page-title.html">
 <link rel="import" href="../bower_components/polymerfire/firebase-app.html">
 <link rel="import" href="../bower_components/polymerfire/firebase-auth.html">
 <link rel="import" href="../bower_components/polymerfire/firebase-document.html">
 <link rel="import" href="../bower_components/polymerfire/firebase-query.html">
 <link rel="import" href="my-icons.html">
 
-<link rel="lazy-import" href="my-view1.html">
-<link rel="lazy-import" href="my-view2.html">
-<link rel="lazy-import" href="my-view3.html">
+<link rel="lazy-import" href="my-list.html">
+<link rel="lazy-import" href="my-post.html">
+<link rel="lazy-import" href="my-login.html">
 <link rel="lazy-import" href="my-view404.html">
 
 <dom-module id="my-app">
   <template>
     <style>
       :host {
-        --app-primary-color: #4285f4;
+        --primary-color: #64B5F6;
+        --secondary-color: #9575CD;
         --app-secondary-color: black;
 
         display: block;
+      }
+
+      * {
+        box-sizing: border-box;
       }
 
       app-drawer-layout:not([narrow]) [drawer-toggle] {
@@ -38,7 +44,7 @@
 
       app-header {
         color: #fff;
-        background-color: var(--app-primary-color);
+        /* background-color: var(--app-primary-color); */
       }
 
       app-header paper-icon-button {
@@ -60,6 +66,16 @@
       .drawer-list a.iron-selected {
         color: black;
         font-weight: bold;
+      }
+
+      #toolbarLogo {
+        margin: 18px -8px 0 0;
+        width:96px;
+        height:96px;
+      }
+
+      app-toolbar {
+        background-image: linear-gradient(to right, var(--secondary-color), var(--primary-color))
       }
     </style>
 
@@ -99,14 +115,16 @@
         tail="{{subroute}}">
     </app-route>
 
-    <app-drawer-layout fullbleed narrow="{{narrow}}">
+    <page-title base-title="Cloud Fuguai" page-title="[[appTitle]]"></page-title>
+
+    <app-drawer-layout id="appDrawerLayout" fullbleed narrow="{{narrow}}">
       <!-- Drawer content -->
       <app-drawer id="drawer" slot="drawer" swipe-open="[[narrow]]">
         <app-toolbar>Menu</app-toolbar>
         <iron-selector selected="[[page]]" attr-for-selected="name" class="drawer-list" role="navigation">
-          <a name="view1" href="[[rootPath]]view1">View One</a>
-          <a name="view2" href="[[rootPath]]view2">View Two</a>
-          <a name="view3" href="[[rootPath]]view3">View Three</a>
+          <a name="list" href="[[rootPath]]list">リスト</a>
+          <a name="post" href="[[rootPath]]post">投稿</a>
+          <a name="login" href="[[rootPath]]login">ログイン/登録</a>
         </iron-selector>
       </app-drawer>
 
@@ -114,9 +132,10 @@
       <app-header-layout has-scrolling-region>
 
         <app-header slot="header" condenses reveals effects="waterfall">
-          <app-toolbar>
-            <paper-icon-button icon="my-icons:menu" drawer-toggle></paper-icon-button>
-            <div main-title>不具合データベース</div>
+          <app-toolbar id="appToolbar">
+            <paper-icon-button hidden$="[[_hideMenuIcon(page)]]" icon="my-icons:menu" drawer-toggle></paper-icon-button>
+            <div main-title id="mainTitle">[[appTitle]]</div>
+            <iron-icon id="toolbarLogo" hidden src="../images/logo-white.svg"></iron-icon>
           </app-toolbar>
         </app-header>
 
@@ -125,16 +144,14 @@
             attr-for-selected="name"
             fallback-selection="view404"
             role="main">
-          <my-view1 name="view1" user-data="[[userData]]"></my-view1>
-          <my-view2 name="view2" user-data="[[userData]]"></my-view2>
-          <my-view3 name="view3"></my-view3>
+          <my-list name="list" user-data="[[userData]]"></my-list>
+          <my-post name="post" user-data="[[userData]]"></my-post>
+          <my-login name="login"></my-login>
           <my-view404 name="view404"></my-view404>
         </iron-pages>
       </app-header-layout>
     </app-drawer-layout>
 
-    <paper-toast id="offlineToast" text="オフライン中の変更は保存されない可能性があります" duration="0" opened$="[[!online]]"><paper-icon-button on-click="_closeOfflineToast" icon="my-icons:close"></paper-icon-button></paper-toast>
-    <paper-toast id="varificationToast" text="アカウントが未承認です" duration="0"><paper-button class="thinButton" on-down="_sendVarificationEmail">承認メール再送</paper-button></paper-toast>
     <paper-toast id="toast"></paper-toast>
     <paper-toast id="warnToast"></paper-toast>
 
@@ -160,6 +177,8 @@
           statusKnown: Object,
           userData: Object,
           online: Object,
+          appTitle: String,
+          // pageTitle: String,
         };
       }
 
@@ -257,7 +276,7 @@
       _routePageChanged(page) {
         // If no page was found in the route data, page will be an empty string.
         // Default to 'view1' in that case.
-        this.page = page || 'view1';
+        this.page = page || 'list';
 
         // Close a non-persistent drawer when the page & route are changed.
         if (!this.$.drawer.persistent) {
@@ -265,7 +284,37 @@
         }
       }
 
+      _hideMenuIcon() {
+        if(this.page == "login") return true
+        return false
+      }
+
       _pageChanged(page) {
+        window.dispatchEvent(new CustomEvent('resize'))
+
+        if(page == "login") {
+          // this.$.appToolbar.style.backgroundImage = "linear-gradient(to right, #9575CD, #64B5F6)"
+          this.$.appToolbar.style.height = "200px"
+          this.$.appToolbar.style.alignItems = "flex-start"
+          this.$.mainTitle.style.fontSize = "70px"
+          this.$.mainTitle.style.transform = "translateY(43px)"
+          this.$.mainTitle.style.textShadow = "0 0 50px rgba(0,0,0,0.4)"
+          this.$.toolbarLogo.hidden = false
+        }else {
+          // this.$.appToolbar.style.backgroundImage = null
+          this.$.appToolbar.style.height = null
+          this.$.appToolbar.style.alignItems = null
+          this.$.mainTitle.style.fontSize = null
+          this.$.mainTitle.style.transform = null
+          this.$.mainTitle.style.textShadow = null
+          this.$.toolbarLogo.hidden = true
+        }
+
+        if(page == "list") this.set("appTitle", "リスト")
+        else if(page == "post") this.set("appTitle", "投稿")
+        else if(page == "login") this.set("appTitle", "Cloud Fuguai")
+        else this.set("appTitle", "Kyoyu")
+
         // Load page import on demand. Show 404 page if fails
         var resolvedPageUrl = this.resolveUrl('my-' + page + '.html');
         Polymer.importHref(

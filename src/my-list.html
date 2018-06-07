@@ -1,8 +1,9 @@
 <link rel="import" href="../bower_components/polymer/polymer-element.html">
 <link rel="import" href="../bower_components/polymerfire/firebase-auth.html">
+<link rel="import" href="helper/list-cell.html">
 <link rel="import" href="shared-styles.html">
 
-<dom-module id="my-view1">
+<dom-module id="my-list">
   <template>
     <style include="shared-styles">
       :host {
@@ -16,11 +17,7 @@
 
 
       <template is="dom-repeat" items="[[posts]]" sort="_computeSort">
-        <template is="dom-repeat" items="[[item.imageURLs]]" as="imageURL" sort="_computeSort">
-          <img src="[[imageURL]]" />
-        </template>
-        <h2>[[item.title]]</h2>
-        <div>[[item.comment]]</div>
+        <list-cell post="[[item]]"></list-cell>
       </template>
 
 
@@ -29,8 +26,8 @@
   </template>
 
   <script>
-    class MyView1 extends Polymer.Element {
-      static get is() { return 'my-view1'; }
+    class MyList extends Polymer.Element {
+      static get is() { return 'my-list'; }
 
       static get properties() {
         return {
@@ -94,6 +91,6 @@
 
     }
 
-    window.customElements.define(MyView1.is, MyView1);
+    window.customElements.define(MyList.is, MyList);
   </script>
 </dom-module>
