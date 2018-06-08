@@ -1,4 +1,5 @@
 <link rel="import" href="../bower_components/polymer/polymer-element.html">
+<link rel="import" href="../bower_components/iron-collapse/iron-collapse.html">
 <link rel="import" href="../bower_components/paper-input/paper-input.html">
 <link rel="import" href="../bower_components/paper-input/paper-textarea.html">
 <link rel="import" href="../bower_components/paper-button/paper-button.html">
@@ -27,7 +28,14 @@
       file-drop-zone.dragover {
           border: 1px dashed #E91E63;
           transition: all .3s;
-      }      
+      }
+
+      paper-progress {
+        --paper-progress-transition-duration: 0.2s;
+        --paper-progress-active-color: var(--primary-color);
+        display:block;
+        width:100%;
+      }
     </style>
 
     <firebase-auth
@@ -38,29 +46,32 @@
 
 
     <div class="card">
+      <iron-collapse id="postForm" opened>
 
-
-        <file-drop-zone
-        accept=".jpeg, .png, .jpg"
-        files="{{files}}"
-        multiple
-        on-error="onError">
-
-        <div slot="drop-zone" class="layout vertical center center-justified">
-
-          画像をアップロード
-
-        </div>
-      </file-drop-zone>
+          <file-drop-zone
+          accept=".jpeg, .png, .jpg"
+          files="{{files}}"
+          multiple
+          on-error="onError">
+  
+          <div slot="drop-zone" class="layout vertical center center-justified">
+  
+            画像をアップロード
+  
+          </div>
+        </file-drop-zone>
+  
+  
+        
+        <paper-input id="title" required label="タイトル"></paper-input>
+  
+        <paper-textarea id="comment" label="備考"></paper-textarea>
+  
+        <paper-button class="primaryButton" on-click="_submit">投稿</paper-button>        
+      </iron-collapse>
 
       <paper-progress hidden id="progressBar" value="[[imageUploadProgress]]" min="0" max="100"></paper-progress>
 
-      
-      <paper-input id="title" required label="タイトル"></paper-input>
-
-      <paper-textarea id="comment" label="備考"></paper-textarea>
-
-      <paper-button class="primaryButton" on-click="_submit">投稿</paper-button>
 
 
     </div>
@@ -110,7 +121,12 @@
             var ref = firebase.storage().ref(`corporates/${corporateKey}/posts/${postKey}/image${i}`)
 
             var blob = files[i]
-            var uploadTask = ref.put(blob)
+
+            var metaData = {
+              cacheControl: 'public,max-age=3600'
+            }
+
+            var uploadTask = ref.put(blob, metaData)
 
             progressBar.hidden = false
 
@@ -119,15 +135,15 @@
               // Observe state change events such as progress, pause, and resume
               // Get task progress, including the number of bytes uploaded and the total number of bytes to be uploaded
 
-              console.log("snapshot", snapshot)
-              console.log("snapshot.ref.fullPath", snapshot.ref.fullPath.split("/")[4])
+              // console.log("snapshot", snapshot)
+              // console.log("snapshot.ref.fullPath", snapshot.ref.fullPath.split("/")[4])
               const index = parseInt(snapshot.ref.fullPath.split("/")[4].replace("image", ""))
-              console.log("index", index)
+              // console.log("index", index)
               totalBytes[index] = snapshot.totalBytes
               totalBytesTransferred[index] = snapshot.bytesTransferred
 
               // console.log("i", i)
-              console.log("total bytes", totalBytes)
+              // console.log("total bytes", totalBytes)
               // console.log("totalbytestransfered", totalBytesTransferred)
 
               var totalByte = 0
@@ -139,7 +155,7 @@
               var progress = totalByteTransferred / (totalByte || 1) * 100
 
               //update progress bar
-              that.set('imageUploadProgress', progress)
+              // that.set('imageUploadProgress', progress)
 
               // console.log('Upload is ' + progress + '% done')
               switch (snapshot.state) {
@@ -165,7 +181,7 @@
               console.log("download url", downloadURL)
               downloadURLs.push(downloadURL)
               if(downloadURLs.length == files.length){
-                progressBar.hidden = true
+                // progressBar.hidden = true
                 resolve(downloadURLs)
               }
             })
@@ -191,12 +207,14 @@
         const db = window.firebase.firestore()
         const postKey = db.collection("posts").doc().id
 
+        this.$.postForm.hide()
+
         this._upload(postKey)
         .then(imageURLs => {
 
         console.log("image urls", imageURLs)
 
-        db.doc(`posts/${postKey}`).set({
+        return db.doc(`posts/${postKey}`).set({
           title: title,
           comment: comment,
           time: window.firebase.firestore.FieldValue.serverTimestamp(),
@@ -205,12 +223,15 @@
           imageURLs: imageURLs,
         }, {merge: true})
 
-        that.$.title.value = null
-        that.$.comment.value = null
-        that.set("files", null)
+        }).then(() => {
+
+          that.$.title.value = null
+          that.$.comment.value = null
+          that.set("files", null)
+          that.$.progressBar.hidden = true
+          that.$.postForm.show()
+
         })
-
-
       }
 
 

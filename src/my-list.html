@@ -75,7 +75,7 @@
         const db = window.firebase.firestore()
         this.timelineListener = db.collection("posts").where("corporateKey", "==", corporateKey)
           .onSnapshot(function(querySnapshot) {
-              that.posts = []
+              that.set("posts", [])
               querySnapshot.forEach(function(doc) {
                   const data = doc.data()
                   // console.log("data", data)
